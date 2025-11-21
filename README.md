@@ -1,2 +1,31 @@
 # devops-portfolio
 devops-portfolio
+mkdir devops-portfolio
+cd devops-portfolio
+
+# Create top-level files
+touch README.md
+
+# Create terraform directory and files
+mkdir terraform
+touch terraform/main.tf
+touch terraform/variables.tf
+touch terraform/outputs.tf
+
+# Create github-actions directory and files
+mkdir github-actions
+touch github-actions/terraform-deploy.yml
+touch github-actions/monitor-alerts.yml
+touch github-actions/aks-deploy.yml
+touch github-actions/secrets-pipeline.yml
+touch github-actions/optimized-ci.yml
+
+# Create k8s directory and files
+mkdir k8s
+touch k8s/deployment.yaml
+touch k8s/hpa.yaml
+
+# Create docs directory and files
+mkdir docs
+touch docs/STAR-examples.md
+touch docs/architecture.png
