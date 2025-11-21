@@ -1,67 +1,64 @@
-# main.tf: Core Infrastructure as Code Example (Azure AKS)
+# deployment.yaml: Kubernetes Deployment and Service Manifest
 
-# Configure the Azure Provider
-terraform {
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.0"
-    }
-  }
-}
+---
+# 1. Deployment: Defines the desired state for the application (Replicas, Image, Strategy)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-web-deployment
+  labels:
+    app: portfolio-web
+spec:
+  # The initial number of application instances to run
+  replicas: 3
+  # Strategy for rolling updates (to ensure zero downtime)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: portfolio-web
+  template:
+    metadata:
+      labels:
+        app: portfolio-web
+    spec:
+      containers:
+      - name: portfolio-web-container
+        # Replace with your actual Docker image path (e.g., from ACR/ECR/GCR)
+        image: "nginx:latest"
+        ports:
+        - containerPort: 80
+        # Basic health check to ensure the Pod is ready to receive traffic
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        # Define resource requests and limits for proper scheduling and stability
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
 
-provider "azurerm" {
-  features {}
-}
-
-# --- Core Resource Group ---
-resource "azurerm_resource_group" "rg" {
-  name     = "rg-devops-portfolio-aks"
-  location = var.location
-  tags = {
-    Environment = var.environment
-    Project     = "DevOps-Portfolio"
-  }
-}
-
-# --- Virtual Network (VNet) ---
-resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-aks-portfolio"
-  address_space       = ["10.0.0.0/16"]
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-}
-
-# --- Subnet for AKS ---
-resource "azurerm_subnet" "aks_subnet" {
-  name                 = "subnet-aks"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
-}
-
-# --- Azure Kubernetes Service (AKS) Cluster ---
-resource "azurerm_kubernetes_cluster" "aks_cluster" {
-  name                = "aks-portfolio-cluster"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  dns_prefix          = "aks-portfolio-dns"
-
-  default_node_pool {
-    name                = "default"
-    node_count          = var.aks_node_count
-    vm_size             = "Standard_DS2_v2"
-    vnet_subnet_id      = azurerm_subnet.aks_subnet.id
-  }
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  tags = {
-    ManagedBy = "Terraform"
-  }
-}
-
-# Note: You would also define variables.tf and outputs.tf 
-# to make this configuration reusable and output connection details.
+---
+# 2. Service: Exposes the Deployment externally
+apiVersion: v1
+kind: Service
+metadata:
+  name: portfolio-web-service
+spec:
+  # Type LoadBalancer will provision a cloud load balancer (e.g., in Azure/AWS/GCP)
+  type: LoadBalancer
+  selector:
+    app: portfolio-web
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
