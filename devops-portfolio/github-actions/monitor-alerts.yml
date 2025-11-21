@@ -1,0 +1,69 @@
+# github-actions/monitor-alerts.yml: Observability and Alerting Workflow
+
+name: 🩺 Application Health Check & Alerting
+
+on:
+  # This makes the workflow run every 5 minutes (a common interval for synthetic checks)
+  schedule:
+    - cron: '*/5 * * * *'
+  # Allows manual execution for testing
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Replace with the actual URL of your deployed Load Balancer/Ingress
+  SERVICE_URL: http://a1b2c3d4e5f6g7h8.cloudapp.net 
+  
+jobs:
+  health_check_and_alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🎯 Check Application Health (Attempt 1)
+        id: health_check
+        # The '|| true' ensures the workflow doesn't fail on the first error, 
+        # allowing us to execute the alerting logic next.
+        run: |
+          echo "Attempting to reach ${{ env.SERVICE_URL }}..."
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.SERVICE_URL }})
+          echo "Received HTTP Status Code: $STATUS_CODE"
+          
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Application failed health check (Status: $STATUS_CODE)."
+            echo "health_status=FAILURE" >> $GITHUB_OUTPUT
+            echo "http_code=$STATUS_CODE" >> $GITHUB_OUTPUT
+            exit 1 # Fail this step to trigger the next conditional step
+          else
+            echo "Application is healthy (Status: 200)."
+            echo "health_status=SUCCESS" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true # Allow subsequent steps to run even if this one fails
+
+      - name: 📢 Send SUCCESS Notification (Optional)
+        # Only run if the health check was successful
+        if: success() || steps.health_check.outputs.health_status == 'SUCCESS'
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          # Assumes you have stored the Slack Webhook URL as a repository secret
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: "✅ SUCCESS: Portfolio Web App is responding normally (${{ env.SERVICE_URL }})."
+          SLACK_TITLE: "Application Health Check"
+          SLACK_COLOR: 'good'
+          
+      - name: 🚨 Send FAILURE Alert
+        # Only run if the health check failed
+        if: failure() || steps.health_check.outputs.health_status == 'FAILURE'
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: |
+            *🔥 ALERT: Portfolio Web App is DOWN or Unreachable!*
+            *URL:* ${{ env.SERVICE_URL }}
+            *Status Code:* ${{ steps.health_check.outputs.http_code }}
+            *Action Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_TITLE: "🚨 PRODUCTION INCIDENT"
+          SLACK_COLOR: 'danger'
