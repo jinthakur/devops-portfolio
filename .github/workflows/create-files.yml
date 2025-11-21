@@ -1,0 +1,61 @@
+name: 📂 Create Portfolio Structure
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Use a standard Linux runner environment
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⬇️ Checkout Repository
+      # This step is crucial; it pulls the repository content onto the runner
+      uses: actions/checkout@v4
+
+    - name: 🏗️ Create Directory Structure and Files
+      # The 'run' command executes the Bash script
+      run: |
+        # Main structure is already in place if you checked out the repo, 
+        # but we'll assume the portfolio is nested for this example.
+        PORTFOLIO_DIR="devops-portfolio"
+        mkdir -p $PORTFOLIO_DIR
+        cd $PORTFOLIO_DIR
+
+        # 1. Create top-level files
+        touch README.md
+
+        # 2. Create terraform directory and files
+        mkdir terraform
+        touch terraform/main.tf
+        touch terraform/variables.tf
+        touch terraform/outputs.tf
+
+        # 3. Create github-actions directory and files
+        mkdir github-actions
+        touch github-actions/terraform-deploy.yml
+        touch github-actions/monitor-alerts.yml
+        touch github-actions/aks-deploy.yml
+        touch github-actions/secrets-pipeline.yml
+        touch github-actions/optimized-ci.yml
+
+        # 4. Create k8s directory and files
+        mkdir k8s
+        touch k8s/deployment.yaml
+        touch k8s/hpa.yaml
+
+        # 5. Create docs directory and files
+        mkdir docs
+        touch docs/STAR-examples.md
+        touch docs/architecture.png
+
+        echo "Successfully created the full directory structure."
+
+    - name: ⬆️ Commit and Push Changes (Optional, but necessary to save files)
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        # Commit the newly created files
+        commit_message: 'feat: Initial creation of portfolio file structure via GitHub Actions'
+        # Ensures the files are committed under the correct directory
+        file_pattern: 'devops-portfolio/**'
