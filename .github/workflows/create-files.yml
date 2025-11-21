@@ -1,24 +1,72 @@
+# .github/workflows/create-files.yml
+
 name: 📂 Create Portfolio Structure
 
 on:
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  build:
-    # ADD THIS BLOCK ⬇️
-    permissions:
-      contents: write # Grants the GITHUB_TOKEN write permission for files
-    # END OF BLOCK ⬆️
+  create_structure:
+    # Use a standard Linux runner environment
     runs-on: ubuntu-latest
+
+    # --- IMPORTANT: Grant the GITHUB_TOKEN write permission for contents ---
+    # This is required for the stefanzweifel/git-auto-commit-action to push changes.
+    permissions:
+      contents: write
+    # ----------------------------------------------------------------------
 
     steps:
     - name: ⬇️ Checkout Repository
+      # This pulls the existing repository content onto the runner
       uses: actions/checkout@v4
 
-    # ... (other steps here) ...
+    - name: 🏗️ Create Directory Structure and Empty Files
+      # The 'run' command executes the Bash script
+      run: |
+        # Define the portfolio root directory
+        PORTFOLIO_DIR="devops-portfolio"
+        
+        # Ensure the root directory exists and navigate into it
+        mkdir -p $PORTFOLIO_DIR
+        cd $PORTFOLIO_DIR
 
-    - name: ⬆️ Commit and Push Changes
+        echo "Creating files in: $(pwd)"
+
+        # 1. Create top-level files
+        touch README.md
+
+        # 2. Create terraform directory and files
+        mkdir terraform
+        touch terraform/main.tf
+        touch terraform/variables.tf
+        touch terraform/outputs.tf
+
+        # 3. Create github-actions directory and files
+        mkdir github-actions
+        touch github-actions/terraform-deploy.yml
+        touch github-actions/monitor-alerts.yml
+        touch github-actions/aks-deploy.yml
+        touch github-actions/secrets-pipeline.yml
+        touch github-actions/optimized-ci.yml
+
+        # 4. Create k8s directory and files
+        mkdir k8s
+        touch k8s/deployment.yaml
+        touch k8s/hpa.yaml
+
+        # 5. Create docs directory and files
+        mkdir docs
+        touch docs/STAR-examples.md
+        touch docs/architecture.png
+
+        echo "Successfully created the full directory structure within $PORTFOLIO_DIR."
+
+    - name: ⬆️ Commit and Push Newly Created Files
+      # This action automatically commits any changes and pushes them back to the repo
       uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: 'feat: Initial creation of portfolio file structure via GitHub Actions'
+        commit_message: 'feat: Initial creation of devops-portfolio file structure'
+        # Only commit the files created in the specified directory
         file_pattern: 'devops-portfolio/**'
