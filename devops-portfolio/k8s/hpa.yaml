@@ -1,0 +1,61 @@
+# hpa.yaml: Horizontal Pod Autoscaler Manifest
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  # The HPA name should clearly indicate the target deployment
+  name: portfolio-web-hpa
+  labels:
+    app: portfolio-web-autoscaler
+spec:
+  # 1. Scaling Target Definition
+  scaleTargetRef:
+    # Target the Deployment defined in deployment.yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    name: portfolio-web-deployment
+    
+  # 2. Scaling Limits
+  # The minimum number of replicas to maintain (our baseline)
+  minReplicas: 3
+  # The maximum number of replicas the deployment is allowed to scale up to
+  maxReplicas: 10
+  
+  # 3. Scaling Metrics (The conditions that trigger scaling)
+  metrics:
+  - type: Resource
+    resource:
+      # Target scaling based on CPU usage
+      name: cpu
+      target:
+        # Use Utilization target type (a percentage of the requested CPU limit)
+        type: Utilization
+        # When the average CPU utilization across all pods exceeds 50%, scale out
+        averageUtilization: 50
+
+  # 4. Behavior (Optional, but recommended for production)
+  # This section defines how aggressively the HPA scales up and down.
+  behavior:
+    scaleDown:
+      # Prevent scaling down too aggressively
+      stabilizationWindowSeconds: 300 # Wait 5 minutes before scaling down
+      policies:
+      - type: Percent
+        value: 10 # Only scale down 10% of replicas at a time
+        periodSeconds: 60
+      - type: Pods
+        value: 2 # Scale down by a maximum of 2 pods per minute
+        periodSeconds: 60
+        selectPolicy: Min # Select the minimum scale down recommended by policies
+    
+    scaleUp:
+      # Allow scaling up more quickly
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100 # Allow scaling up to 100% of current replicas
+        periodSeconds: 15
+      - type: Pods
+        value: 4 # Scale up by a maximum of 4 pods at a time
+        periodSeconds: 15
+        selectPolicy: Max # Select the maximum scale up recommended by policies
